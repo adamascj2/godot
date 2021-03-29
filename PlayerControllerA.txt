@@ -1,0 +1,40 @@
+extends KinematicBody
+
+var speedad = 3
+var velocity = Vector3.ZERO
+var rotd = false
+var rote = false
+var gravity = Vector3.DOWN * 0.98
+ 
+
+func _physics_process(delta):
+	velocity += gravity * delta
+	 
+	move_and_slide(velocity)
+	if(rotd):rotate_y(-0.4*delta) 
+	if(rote):rotate_y(0.4*delta)
+	 
+				
+
+func _on_frente_button_down():
+	velocity +=  transform.basis.z * speedad
+func _on_frente_button_up():
+	velocity = Vector3.ZERO
+	
+func _on_rotdir_button_down():
+	rotd = true
+func _on_rotdir_button_up():
+	rotd = false
+	 
+func _on_tras_button_down():
+	velocity +=  -transform.basis.z * speedad
+func _on_tras_button_up():
+	velocity = Vector3.ZERO
+
+func _on_rotesq_button_down():
+	 rote = true
+func _on_rotesq_button_up():
+	rote = false
+
+
+
