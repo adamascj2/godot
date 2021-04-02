@@ -1,0 +1,35 @@
+using Godot;
+using System;
+using Steamworks;
+
+public class hostSection : Panel
+{
+	 protected Callback<LobbyCreated_t> Callback_lobbyCreated; 
+	public override void _Ready()
+	{
+		 GetNode<Button>("Button").Connect("pressed", this, nameof(_OnButtonPressed));
+		 
+	}
+
+	 public void _OnButtonPressed()
+	 {
+		 
+		 SteamAPICall_t newLobby = SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 2);
+		 Callback_lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
+		
+	
+	
+	 
+		
+	 }
+	void OnLobbyCreated(LobbyCreated_t lobby)
+	{
+		GD.Print("Created lobby!!!!");
+		 if (lobby.m_eResult == EResult.k_EResultOK)
+		{
+			 GetNode<Label>("Label").Text =  "Lobby ID: " + lobby.m_ulSteamIDLobby + "\nWaiting for player to join...";
+			 
+			}
+	 }
+}
+
