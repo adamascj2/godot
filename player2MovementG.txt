@@ -1,0 +1,102 @@
+using Godot;
+using System;
+///F
+using Steamworks;
+using FlatBuffers;
+ //using NetworkPacket;
+///F
+
+public class player2Movement : KinematicBody2D
+{
+	Vector2 velocity;
+	int speed = 200;
+	 ///E2
+	 Global global;
+	///E2
+	///F
+	KinematicBody2D player1;  
+	KinematicBody2D player2;
+	///F
+	///E2
+	///G
+	Timer sendTimer;
+	bool sendPacketReady;
+   ///G
+public override void _Ready()
+	{
+global = GetParent().GetNode("../Global") as Global;
+///F
+player1 = GetParent().GetNode("../GUI/player1") as KinematicBody2D;
+player2 = GetParent().GetNode("../GUI/player2") as KinematicBody2D;
+///F
+///G
+sendTimer = GetParent().GetNode("../GUI/sendTimer") as Timer;
+sendTimer.Connect("timeout", this, "_on_timeout");
+///G
+}
+///E2
+	public override void _Input(InputEvent @event)
+	{
+		velocity = new Vector2();
+
+		if (Input.IsActionPressed("ui_right"))
+			velocity.x += 1;
+		if (Input.IsActionPressed("ui_left"))
+			velocity.x -= 1;
+		if (Input.IsActionPressed("ui_down"))
+			velocity.y += 1;
+		if (Input.IsActionPressed("ui_up"))
+			velocity.y -= 1;
+
+		velocity = velocity.Normalized() * speed;
+	}
+
+	public override void _PhysicsProcess(float delta){
+		if (!global.playingAsHost) ///E2
+		  velocity =  MoveAndSlide(velocity);
+	}
+	///F
+	public override void _Process(float delta){   
+		transferPlayerMovement();
+   }
+	 
+
+	private void transferPlayerMovement()
+	{
+		 ///G
+		if ( sendPacketReady )
+		{
+		///G
+			// Create a new packet with movement data
+			FlatBufferBuilder builder = new FlatBufferBuilder(8);
+			 NetworkPacket.OtherPlayer.StartOtherPlayer(builder);
+			 
+
+			if (global.playingAsHost)
+				NetworkPacket.OtherPlayer.AddPos(builder, NetworkPacket.Vec2.CreateVec2(builder, player1.Transform.origin.x, player1.Transform.origin.y));
+			else
+				NetworkPacket.OtherPlayer.AddPos(builder, NetworkPacket.Vec2.CreateVec2(builder, player2.Transform.origin.x, player2.Transform.origin.y));
+			
+			NetworkPacket.OtherPlayer.AddAction(builder, 1);
+			var stopBuilding = NetworkPacket.OtherPlayer.EndOtherPlayer(builder);
+			builder.Finish(stopBuilding.Value);
+
+			// Convert the Flatbuffer into a byte array
+			byte[] packet = builder.SizedByteArray();
+			// Send packet through Steam, destination according to who you're playing as
+			if (global.playingAsHost)
+				SteamNetworking.SendP2PPacket(global.player2, packet, (uint)packet.Length, EP2PSend.k_EP2PSendUnreliable);
+			else
+				SteamNetworking.SendP2PPacket(global.player1, packet, (uint)packet.Length, EP2PSend.k_EP2PSendUnreliable);
+		///G
+		}
+		sendPacketReady = false;
+		///G	
+	}
+	///G
+	private void _on_timeout(){   
+	sendPacketReady = true;
+	}
+	///G
+			
+}//fim da classe
