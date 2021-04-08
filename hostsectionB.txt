@@ -1,0 +1,67 @@
+using Godot;
+using System;
+using Steamworks;
+
+public class hostSection : Panel{
+ protected Callback<LobbyCreated_t> Callback_lobbyCreated;
+ ///B 
+ protected Callback<LobbyEnter_t> Callback_lobbyEntered;
+ Global global;
+ CSteamID lobbyID;
+ ///B
+	
+ public override void _Ready(){
+  GetNode<Button>("Button").Connect("pressed", this, nameof(_OnButtonPressed));
+  ///B
+  global = GetParent().GetNode("../Global") as Global;
+  global.playingAsHost = false;
+  ///B
+ }
+
+ public void _OnButtonPressed(){
+  ///B 
+  if (GetNode<Button>("Button").Text == "Start hosting"){
+  ///B
+	SteamAPICall_t newLobby = SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 2);
+	Callback_lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
+       ///B	 
+       GetNode<Button>("Button").Disabled = true;
+	global.playingAsHost = true;
+	 
+		}
+    else if (GetNode<Button>("Button").Text == "Cancel hosting"){
+	SteamMatchmaking.LeaveLobby(lobbyID);
+	GetNode<Button>("Button").Text = "Start hosting";
+	GetNode<Label>("Label").Text = "Status: IDLE";
+    }
+    ///B
+ }
+ void OnLobbyCreated(LobbyCreated_t lobby){
+	GD.Print("Created lobby!!!!");
+	if (lobby.m_eResult == EResult.k_EResultOK){
+		GetNode<Label>("Label").Text =  "Lobby ID: " + lobby.m_ulSteamIDLobby + "\nWaiting for player to join...";
+		///B
+		lobbyID = (CSteamID)lobby.m_ulSteamIDLobby;
+		GetNode<Button>("Button").Disabled = false;
+		GetNode<Button>("Button").Text = "Cancel hosting";
+		Callback_lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
+			
+	  }
+	  else
+		GetNode<Label>("Label").Text = "Failed to create lobby.\nReason: " + lobby.m_eResult;
+	  ///B
+ }
+
+ ///B	
+  void OnLobbyEntered(LobbyEnter_t entrance){
+   if (global.playingAsHost){
+	GD.Print("You just entered lobby " + entrance.m_ulSteamIDLobby + " as host.");
+   }
+   else if (!global.playingAsHost){
+	GD.Print("You just entered lobby " + entrance.m_ulSteamIDLobby);
+   }
+   
+ }  
+ ///B	 
+	
+}   
