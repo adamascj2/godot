@@ -1,0 +1,147 @@
+using Godot;
+using System;
+using Steamworks;
+
+public class hostSection : Panel
+{
+  protected Callback<LobbyCreated_t> Callback_lobbyCreated;
+  protected Callback<LobbyEnter_t> Callback_lobbyEntered;
+  Global global;
+  CSteamID lobbyID;
+  ///C
+  CSteamID joinID;
+  Tree invitationTree;
+  Button joinSelectedButton;
+  Label joinSectionStatus;
+  protected Callback<LobbyInvite_t> Callback_lobbyInvite;
+  RichTextLabel chatBox;
+  LineEdit chatField;
+  protected Callback<LobbyChatUpdate_t> Callback_lobbyChatUpdate;
+  ///C
+	
+	
+  public override void _Ready(){
+   GetNode<Button>("Button").Connect("pressed", this, nameof(_OnButtonPressed));
+   global = GetParent().GetNode("../Global") as Global;
+   global.playingAsHost = false;
+   ///C
+   joinSectionStatus = GetParent().GetNode("../GUI/joinSection/joinSectionStatus") as Label;
+   joinSelectedButton = GetParent().GetNode("../GUI/joinSection/joinSelectedButton") as Button;
+   invitationTree = GetParent().GetNode("../GUI/joinSection/invitationTree") as Tree;
+   chatBox = GetParent().GetNode("../GUI/chatSection/chatBox") as RichTextLabel;
+   chatField = GetParent().GetNode("../GUI/chatSection/chatField") as LineEdit;
+		
+   joinSelectedButton.Disabled = true;
+   TreeItem item = invitationTree.CreateItem();
+   item.SetText(0, "FRIEND");
+   item.SetText(1, "JOIN/SALA ID");
+    
+   //Para teste
+   //TreeItem item2 = invitationTree.CreateItem();
+   //item2.SetText(0, "name");
+   //item2.SetText(1, "1234567890");
+    	 
+   GetParent().GetNode<Tree>("../GUI/joinSection/invitationTree").Connect("item_selected", this, nameof(_OnItemSel));
+   GetParent().GetNode<Tree>("../GUI/joinSection/invitationTree").Connect("nothing_selected", this, nameof(_OnNoSel));
+   joinSelectedButton.Connect("pressed", this, nameof(_OnJoinSelected));
+   ///C
+
+ 
+ }
+
+  public void _OnButtonPressed(){
+	if (GetNode<Button>("Button").Text == "Enter SPACEWAR and create LOBBY-SALA"){
+		SteamAPICall_t newLobby = SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 2);
+		Callback_lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
+		GetNode<Button>("Button").Disabled = true;
+		global.playingAsHost = true;
+	 }
+	else if (GetNode<Button>("Button").Text == "Cancel SPACEWAR and LOBBY-SALA"){
+		SteamMatchmaking.LeaveLobby(lobbyID);
+		GetNode<Button>("Button").Text = "Enter SPACEWAR and create LOBBY-SALA";
+		GetNode<Label>("Label").Text = "Status: IDLE";
+			 
+	}
+  }
+  void OnLobbyCreated(LobbyCreated_t lobby){
+	GD.Print("Created lobby-sala!!!!");
+	if (lobby.m_eResult == EResult.k_EResultOK){
+		GetNode<Label>("Label").Text =  "Lobby-sala ID: " + lobby.m_ulSteamIDLobby + "\nWaiting for player to join...";
+		lobbyID = (CSteamID)lobby.m_ulSteamIDLobby;
+		GetNode<Button>("Button").Disabled = false;
+		GetNode<Button>("Button").Text = "Cancel SPACEWAR and LOBBY-SALA";
+		Callback_lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
+	}
+	else
+		GetNode<Label>("Label").Text = "Failed to create lobby-sala.\nReason: " + lobby.m_eResult;
+  }
+	 
+  void OnLobbyEntered(LobbyEnter_t entrance){
+	if (global.playingAsHost){
+	        ///C
+		lobbyID = (CSteamID)entrance.m_ulSteamIDLobby;
+		///C
+		GD.Print("You just entered lobby-sala " + entrance.m_ulSteamIDLobby + " as host.");
+	}
+        else if (!global.playingAsHost){
+		GD.Print("You just entered lobby-sala " + entrance.m_ulSteamIDLobby);
+	}
+        ///C
+        Callback_lobbyInvite = Callback<LobbyInvite_t>.Create(OnLobbyInvite);
+	Callback_lobbyChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
+	///C
+ }
+
+ ///C
+ void OnLobbyInvite(LobbyInvite_t invitation){
+	GD.Print("You have just been invited");
+	// Display invitation in tree
+	TreeItem item = invitationTree.CreateItem();
+	item.SetText(0, SteamFriends.GetFriendPersonaName((CSteamID)invitation.m_ulSteamIDUser));
+	item.SetText(1, invitation.m_ulSteamIDLobby.ToString());
+ }
+
+ public void _OnItemSel(){
+	if (invitationTree.GetSelected().GetText(0) != "FRIEND")
+		joinSelectedButton.Disabled = false;
+	else
+		joinSelectedButton.Disabled = true;
+ }
+
+ public void _OnNoSel(){
+	joinSelectedButton.Disabled = true;
+ }
+		
+ public void _OnJoinSelected(){
+	if (joinSelectedButton.Text == "Join selected"){
+		global.playingAsHost = false;
+               // Join the lobby
+		joinID = (CSteamID)ulong.Parse(invitationTree.GetSelected().GetText(1), System.Globalization.NumberStyles.None);
+		SteamMatchmaking.JoinLobby(joinID);
+		joinSelectedButton.Text = "Leave lobby-sala";
+	}
+	else if (joinSelectedButton.Text == "Leave lobby-sala"){
+		SteamMatchmaking.LeaveLobby(joinID);
+		joinSelectedButton.Text = "Join selected";
+		chatField.Editable = false;
+        }
+ }
+		 
+  private void OnLobbyChatUpdate(LobbyChatUpdate_t update){
+	chatBox.AddText("\n" + SteamFriends.GetFriendPersonaName((CSteamID)update.m_ulSteamIDUserChanged) + " made a change in the lobby. Change: " + update.m_rgfChatMemberStateChange);
+
+  }
+  ///C
+	  
+	 
+} ///fim da classe  
+
+ 
+
+ 
+
+
+ 
+
+
+
