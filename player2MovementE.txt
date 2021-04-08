@@ -1,0 +1,36 @@
+using Godot;
+using System;
+
+public class player2Movement : KinematicBody2D
+{
+	Vector2 velocity;
+	int speed = 200;
+	 ///E2
+	 Global global;
+public override void _Ready()
+	{
+global = GetParent().GetNode("../Global") as Global;
+}
+///E2
+	public override void _Input(InputEvent @event)
+	{
+		velocity = new Vector2();
+
+		if (Input.IsActionPressed("ui_right"))
+			velocity.x += 1;
+		if (Input.IsActionPressed("ui_left"))
+			velocity.x -= 1;
+		if (Input.IsActionPressed("ui_down"))
+			velocity.y += 1;
+		if (Input.IsActionPressed("ui_up"))
+			velocity.y -= 1;
+
+		velocity = velocity.Normalized() * speed;
+	}
+
+	public override void _PhysicsProcess(float delta){
+		if (!global.playingAsHost) ///E2
+		  velocity =  MoveAndSlide(velocity);
+	}
+	
+}
